@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import shutil
 import os
 from pathlib import Path
-from backend.main import MediaPipeFeatureExtractor
+from main import MediaPipeFeatureExtractor
 
 # ---------------------------------------------------------
 # Initialize FastAPI app
@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 # Initialize model once at startup
-model = MediaPipeFeatureExtractor("model.json")
+model = MediaPipeFeatureExtractor("utils/model.json")
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
