@@ -10,36 +10,39 @@ export default function App() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [isCameraCapture, setIsCameraCapture] = useState(false);
   const chartRef = useRef(null);
   const resultsContainerRef = useRef(null);
 
-  // file handlers
+  // handle file input
   function handleFileInputChange(e) {
     const f = e.target.files?.[0];
-    if (f) handleSelectedFile(f);
+    if (f) handleSelectedFile(f, false);
   }
-  function handleSelectedFile(f) {
+
+  function handleSelectedFile(f, fromCamera = false) {
     if (!f.type.startsWith("image/")) return alert("Please select an image file.");
     if (f.size > 10 * 1024 * 1024) return alert("File must be < 10MB");
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setResult(null);
+    setIsCameraCapture(fromCamera);
   }
 
   function handleDrop(e) {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
-    if (f) handleSelectedFile(f);
+    if (f) handleSelectedFile(f, false);
   }
 
-  // camera capture
+  // take photo from webcam
   async function takePhoto() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       const video = document.createElement("video");
       video.srcObject = stream;
       video.play();
-      // small overlay UI
+
       const modal = document.createElement("div");
       modal.style.position = "fixed";
       modal.style.inset = "0";
@@ -47,6 +50,7 @@ export default function App() {
       modal.style.alignItems = "center";
       modal.style.justifyContent = "center";
       modal.style.background = "rgba(0,0,0,0.6)";
+
       const holder = document.createElement("div");
       holder.style.background = "#fff";
       holder.style.padding = "12px";
@@ -69,11 +73,14 @@ export default function App() {
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0);
-        canvas.toBlob((blob) => {
-          const capturedFile = new File([blob], "capture.jpg", { type: "image/jpeg" });
-          handleSelectedFile(capturedFile);
-        }, "image/jpeg", 0.85);
-        // cleanup
+        canvas.toBlob(
+          (blob) => {
+            const capturedFile = new File([blob], "capture.jpg", { type: "image/jpeg" });
+            handleSelectedFile(capturedFile, true);
+          },
+          "image/jpeg",
+          0.85
+        );
         stream.getTracks().forEach((t) => t.stop());
         modal.remove();
       };
@@ -82,20 +89,26 @@ export default function App() {
     }
   }
 
-  // send to backend
+  // analyze image
   async function analyze() {
-    if (!file) return alert("Choose an image first");
+    if (!file) return alert("Choose or capture an image first");
     setLoading(true);
     setResult(null);
+
     const fd = new FormData();
     fd.append("file", file);
+
+    const endpoint = isCameraCapture
+      ? "http://127.0.0.1:8000/image" // ✅ camera capture
+      : "http://127.0.0.1:8000/predict";   // ✅ uploaded file
+
     try {
-      const res = await axios.post("http://127.0.0.1:8000/image", fd, {
+      const res = await axios.post(endpoint, fd, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 60000,
       });
       setResult(res.data);
-      // reveal animation
+
       setTimeout(() => {
         const el = resultsContainerRef.current;
         if (el) {
@@ -111,23 +124,7 @@ export default function App() {
     }
   }
 
-  function drawChart(probs) {
-    const ctx = chartRef.current;
-    if (!ctx) return;
-    const c = ctx.getContext("2d");
-    if (window._malnutri_chart) window._malnutri_chart.destroy();
-    const labels = Object.keys(probs);
-    const values = Object.values(probs).map((v) => Math.round(v * 100));
-    window._malnutri_chart = new Chart(c, {
-      type: "doughnut",
-      data: {
-        labels,
-        datasets: [{ data: values, backgroundColor: ["#16a34a", "#f59e0b", "#ef4444"] }],
-      },
-      options: { plugins: { legend: { position: "bottom" } } },
-    });
-  }
-
+  // download PDF report
   async function downloadReport() {
     if (!resultsContainerRef.current) return;
     const canvas = await html2canvas(resultsContainerRef.current, { scale: 2 });
@@ -138,23 +135,77 @@ export default function App() {
     pdf.save("malnutrition_report.pdf");
   }
 
-  function severityClass(sev) {
-  if (!sev) return "status-green";
-  if (sev.toLowerCase().includes("severe")) return "status-red";
-  if (sev.toLowerCase().includes("moder")) return "status-yellow";
-  if (sev.toLowerCase().includes("mild")) return "status-yellow";
-  return "status-green";
+  // ✅ severity color + glow intensity
+  function severityStyle(sev) {
+    if (!sev)
+      return { background: "#dcfce7", color: "#166534", borderColor: "#22c55e" };
+
+    const s = sev.toLowerCase();
+
+    if (s.includes("severe") || s.includes("malnourished")) {
+      return {
+        background: "#fee2e2",
+        color: "#7f1d1d",
+        borderColor: "#ef4444",
+        boxShadow: "0 0 12px rgba(239,68,68,0.4)",
+        animation: "pulseRed 2s infinite",
+      };
+    }
+
+    if (s.includes("moder")) {
+      return {
+        background: "#fef3c7",
+        color: "#78350f",
+        borderColor: "#f59e0b",
+        boxShadow: "0 0 12px rgba(245,158,11,0.4)",
+      };
+    }
+
+    if (s.includes("mild")) {
+      return {
+        background: "#fef9c3",
+        color: "#713f12",
+        borderColor: "#eab308",
+        boxShadow: "0 0 10px rgba(234,179,8,0.25)",
+      };
+    }
+
+    if (s.includes("normal") || s.includes("healthy")) {
+      return {
+        background: "#dcfce7",
+        color: "#166534",
+        borderColor: "#22c55e",
+        boxShadow: "0 0 10px rgba(34,197,94,0.25)",
+      };
+    }
+
+    return { background: "#dcfce7", color: "#166534", borderColor: "#22c55e" };
   }
+
+  // inject keyframes for pulsing severe box
+  React.useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      @keyframes pulseRed {
+        0% { box-shadow: 0 0 10px rgba(239,68,68,0.4); }
+        50% { box-shadow: 0 0 25px rgba(239,68,68,0.8); }
+        100% { box-shadow: 0 0 10px rgba(239,68,68,0.4); }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
 
   return (
     <div className="app-container">
       <header className="header">
         <h1 className="h-title">Malnutrition Detection System</h1>
-        <p className="h-sub">Advanced computer vision technology to assess nutritional status from photographs</p>
+        <p className="h-sub">
+          Advanced computer vision technology to assess nutritional status from photographs
+        </p>
       </header>
 
       <div className="grid">
-        {/* UPLOAD CARD */}
+        {/* Upload Section */}
         <div className="card">
           <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 700 }}>Upload Image</h3>
 
@@ -167,8 +218,18 @@ export default function App() {
           >
             {!preview ? (
               <>
-                <svg className="upload-ico" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8">
-                  <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="upload-ico"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#94a3b8"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                   <path d="M15 13l-3-3-3 3" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M12 16V4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -179,13 +240,33 @@ export default function App() {
               <>
                 <img src={preview} alt="preview" className="preview-img" />
                 <div style={{ marginTop: 10, color: "var(--muted)" }}>{file?.name}</div>
+                {isCameraCapture && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      color: "#0f766e",
+                      fontSize: 13,
+                      fontWeight: 500,
+                    }}
+                  >
+                    📸 Captured via Camera
+                  </div>
+                )}
               </>
             )}
-            <input id="fileInput" type="file" accept="image/*" onChange={handleFileInputChange} style={{ display: "none" }} />
+            <input
+              id="fileInput"
+              type="file"
+              accept="image/*"
+              onChange={handleFileInputChange}
+              style={{ display: "none" }}
+            />
           </div>
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-            <button type="button" className="btn btn-ghost" onClick={takePhoto}>Take Photo</button>
+            <button type="button" className="btn btn-ghost" onClick={takePhoto}>
+              Take Photo
+            </button>
             <div style={{ flex: 1 }} />
             <button
               onClick={analyze}
@@ -197,38 +278,74 @@ export default function App() {
           </div>
         </div>
 
-        {/* RESULTS CARD */}
+        {/* Results Section */}
         <div className="card" ref={resultsContainerRef}>
           <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 700 }}>Analysis Results</h3>
 
           {!result ? (
             <div className="result-empty">
               <svg width="84" height="84" fill="none" viewBox="0 0 24 24" style={{ opacity: 0.12 }}>
-                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6" stroke="#111827" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 19V9a2 2 0 012-2h2" stroke="#111827" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6"
+                  stroke="#111827"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 19V9a2 2 0 012-2h2"
+                  stroke="#111827"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
-              <div style={{ marginTop: 10, color: "var(--muted)" }}>Upload an image and click analyze to see results</div>
+              <div style={{ marginTop: 10, color: "var(--muted)" }}>
+                Upload or capture an image and click analyze to see results
+              </div>
             </div>
           ) : (
             <div className="result-card">
-              <div className={`status-card ${severityClass(result.severity_level)}`}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>Severity: {result.severity_level}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 13 }}>Score: {result.severity_score ? result.severity_score.toFixed(2) : "N/A"}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 13 }}>Face detected: {result.face_detected ? "Yes" : "No"}</div>
+              <div
+                style={{
+                  ...severityStyle(result.severity_level),
+                  border: "2px solid",
+                  borderRadius: 8,
+                  padding: 14,
+                  transition: "all 0.4s ease",
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                  Severity: {result.severity_level}
+                </div>
+                <div style={{ color: "inherit", fontSize: 13 }}>
+                  Score: {result.severity_score ? result.severity_score.toFixed(2) : "N/A"}
+                </div>
+                <div style={{ color: "inherit", fontSize: 13 }}>
+                  Face detected: {result.face_detected ? "Yes" : "No"}
                 </div>
               </div>
 
-              <div style={{ background: "#fff9ed", borderRadius:8, padding:12, border:"1px solid #fce9b8", marginTop:12 }}>
+              <div
+                style={{
+                  background: "#fff9ed",
+                  borderRadius: 8,
+                  padding: 12,
+                  border: "1px solid #fce9b8",
+                  marginTop: 12,
+                }}
+              >
                 <strong>Recommendations</strong>
-                <ul style={{ marginTop:8, paddingLeft:18, color:"var(--muted)" }}>
+                <ul style={{ marginTop: 8, paddingLeft: 18, color: "var(--muted)" }}>
                   <li>• Consult healthcare for medical diagnosis</li>
                   <li>• Monitor dietary intake and weight</li>
                 </ul>
               </div>
 
-              <div style={{ display:"flex", gap:10, marginTop:12 }}>
-                <button onClick={downloadReport} className="btn btn-primary" style={{ flex:1 }}>Download Report</button>
+              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                <button onClick={downloadReport} className="btn btn-primary" style={{ flex: 1 }}>
+                  Download Report
+                </button>
               </div>
             </div>
           )}
