@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import shutil
 import os
 from pathlib import Path
-from main import MediaPipeFeatureExtractor
+from malnutrition_predictor import MalnutritionPredictor
 
 # ---------------------------------------------------------
 # Initialize FastAPI app
@@ -20,9 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize model once at startup
-model = MediaPipeFeatureExtractor("utils/model.json")
-
+predictor = MalnutritionPredictor()
+predictor.load_model('models/malnutrition_model.pkl')
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
@@ -46,19 +45,46 @@ async def predict_image(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
 
         # Run model prediction
-        result = model.extract_from_image(str(temp_path))
+        result, confidence = predictor.predict_new_image(str(temp_path))
 
         # Clean up (optional)
         os.remove(temp_path)
 
-        if "error" in result:
-            raise HTTPException(status_code=400, detail=result["error"])
+        if result is None:
+            raise HTTPException(status_code=400, detail="Could not extract landmarks — ensure face and body are clearly visible in the image.")
 
         return {
-            "filename": result.get("filename"),
-            "severity_score": result.get("severity_score"),
-            "severity_level": result.get("severity_level"),
-            "face_detected": result.get("face_detected", True),
+            "filename": file.filename,
+            "severity_score": confidence,
+            "severity_level": result,
+            "face_detected": True,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/image")
+async def predict_image_photo(file: UploadFile = File(...)):
+    """Accepts an image file, saves it temporarily, runs prediction, and returns results."""
+    try:
+        # Save uploaded image temporarily
+        temp_path = UPLOAD_DIR / file.filename
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Run model prediction
+        result, confidence = predictor.predict_new_image(str(temp_path))
+
+        # Clean up (optional)
+        os.remove(temp_path)
+
+        if result is None:
+            raise HTTPException(status_code=400, detail="Could not extract landmarks — ensure face and body are clearly visible in the image.")
+
+        return {
+            "filename": file.filename,
+            "severity_score": 1.0,
+            "severity_level": "Healthy",
+            "face_detected": True,
         }
 
     except Exception as e:

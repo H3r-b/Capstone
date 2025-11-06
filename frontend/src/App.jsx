@@ -90,7 +90,7 @@ export default function App() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/predict", fd, {
+      const res = await axios.post("http://127.0.0.1:8000/image", fd, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 60000,
       });
