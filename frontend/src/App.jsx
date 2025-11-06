@@ -1,7 +1,6 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+// Remove html2canvas and jsPDF imports since we're removing download functionality
 import { Chart, registerables } from "chart.js";
 Chart.register(...registerables);
 
@@ -13,6 +12,16 @@ export default function App() {
   const [isCameraCapture, setIsCameraCapture] = useState(false);
   const chartRef = useRef(null);
   const resultsContainerRef = useRef(null);
+  
+  // New state for severity form
+  const [severityForm, setSeverityForm] = useState({
+    age: "",
+    height: "",
+    weight: "",
+    sex: "", // "male" or "female"
+  });
+  const [severityResult, setSeverityResult] = useState(null);
+  const [loadingSeverity, setLoadingSeverity] = useState(false);
 
   // handle file input
   function handleFileInputChange(e) {
@@ -94,13 +103,14 @@ export default function App() {
     if (!file) return alert("Choose or capture an image first");
     setLoading(true);
     setResult(null);
+    setSeverityResult(null); // Reset severity result when new analysis starts
 
     const fd = new FormData();
     fd.append("file", file);
 
     const endpoint = isCameraCapture
-      ? "http://127.0.0.1:8000/image" // ✅ camera capture
-      : "http://127.0.0.1:8000/predict";   // ✅ uploaded file
+      ? "http://127.0.0.1:8000/image"
+      : "http://127.0.0.1:8000/predict";
 
     try {
       const res = await axios.post(endpoint, fd, {
@@ -124,16 +134,34 @@ export default function App() {
     }
   }
 
-  // download PDF report
-  async function downloadReport() {
-    if (!resultsContainerRef.current) return;
-    const canvas = await html2canvas(resultsContainerRef.current, { scale: 2 });
-    const img = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "portrait" });
-    pdf.text("Malnutrition Report", 12, 18);
-    pdf.addImage(img, "PNG", 10, 30, 190, (canvas.height / canvas.width) * 190);
-    pdf.save("malnutrition_report.pdf");
+  // Calculate severity based on form inputs
+  async function calculateSeverity() {
+    if (!severityForm.age || !severityForm.height || !severityForm.weight || !severityForm.sex) {
+      return alert("Please fill in all fields");
+    }
+
+    setLoadingSeverity(true);
+    try {
+      const res = await axios.post("http://127.0.0.1:8000/severity", {
+        age: parseInt(severityForm.age),
+        height: parseFloat(severityForm.height),
+        weight: parseFloat(severityForm.weight),
+        sex: severityForm.sex === "male" ? 1 : 0,
+      });
+
+      setSeverityResult(res.data.severity);
+    } catch (err) {
+      console.error(err);
+      alert("Error calculating severity. Please check your inputs.");
+    } finally {
+      setLoadingSeverity(false);
+    }
   }
+
+  // Check if malnutrition is detected
+  const isMalnutritionDetected = result && 
+    result.severity_level && 
+    result.severity_level.toLowerCase().includes("malnourished");
 
   // ✅ severity color + glow intensity
   function severityStyle(sev) {
@@ -326,6 +354,129 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Show form if malnutrition is detected */}
+              {isMalnutritionDetected && (
+                <div
+                  style={{
+                    background: "#f0f9ff",
+                    borderRadius: 8,
+                    padding: 16,
+                    border: "1px solid #bae6fd",
+                    marginTop: 12,
+                  }}
+                >
+                  <strong style={{ display: "block", marginBottom: 12 }}>
+                    Enter Details for Severity Assessment
+                  </strong>
+                  
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
+                        Age (years)
+                      </label>
+                      <input
+                        type="number"
+                        value={severityForm.age}
+                        onChange={(e) => setSeverityForm({ ...severityForm, age: e.target.value })}
+                        placeholder="Enter age"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: "block", fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
+                        Height (cm)
+                      </label>
+                      <input
+                        type="number"
+                        value={severityForm.height}
+                        onChange={(e) => setSeverityForm({ ...severityForm, height: e.target.value })}
+                        placeholder="Enter height"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: "block", fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
+                        Weight (kg)
+                      </label>
+                      <input
+                        type="number"
+                        value={severityForm.weight}
+                        onChange={(e) => setSeverityForm({ ...severityForm, weight: e.target.value })}
+                        placeholder="Enter weight"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: "block", fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
+                        Sex
+                      </label>
+                      <select
+                        value={severityForm.sex}
+                        onChange={(e) => setSeverityForm({ ...severityForm, sex: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: 14,
+                          background: "white",
+                        }}
+                      >
+                        <option value="">Select sex</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={calculateSeverity}
+                    disabled={loadingSeverity || !severityForm.age || !severityForm.height || !severityForm.weight || !severityForm.sex}
+                    className={`btn ${loadingSeverity || !severityForm.age || !severityForm.height || !severityForm.weight || !severityForm.sex ? "btn-disabled" : "btn-primary"}`}
+                    style={{ marginTop: 12, width: "100%" }}
+                  >
+                    {loadingSeverity ? "Calculating..." : "Calculate Severity"}
+                  </button>
+
+                  {severityResult && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 12,
+                        borderRadius: 6,
+                        background: severityResult === "Malnutrition" ? "#fee2e2" : "#fef3c7",
+                        border: `1px solid ${severityResult === "Malnutrition" ? "#fecaca" : "#fde68a"}`,
+                        color: severityResult === "Malnutrition" ? "#7f1d1d" : "#78350f",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Malnutrition Severity: {severityResult}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div
                 style={{
                   background: "#fff9ed",
@@ -342,11 +493,7 @@ export default function App() {
                 </ul>
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                <button onClick={downloadReport} className="btn btn-primary" style={{ flex: 1 }}>
-                  Download Report
-                </button>
-              </div>
+              {/* Removed download report button */}
             </div>
           )}
         </div>
