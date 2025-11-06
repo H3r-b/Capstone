@@ -90,13 +90,11 @@ export default function App() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await axios.post("http://localhost:8000/predict", fd, {
+      const res = await axios.post("http://127.0.0.1:8000/predict", fd, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 60000,
       });
       setResult(res.data);
-      // render chart
-      setTimeout(() => drawChart(res.data?.probabilities || {}), 120);
       // reveal animation
       setTimeout(() => {
         const el = resultsContainerRef.current;
@@ -141,10 +139,11 @@ export default function App() {
   }
 
   function severityClass(sev) {
-    if (!sev) return "status-green";
-    if (sev.toLowerCase().includes("severe")) return "status-red";
-    if (sev.toLowerCase().includes("moder")) return "status-yellow";
-    return "status-green";
+  if (!sev) return "status-green";
+  if (sev.toLowerCase().includes("severe")) return "status-red";
+  if (sev.toLowerCase().includes("moder")) return "status-yellow";
+  if (sev.toLowerCase().includes("mild")) return "status-yellow";
+  return "status-green";
   }
 
   return (
@@ -212,20 +211,15 @@ export default function App() {
             </div>
           ) : (
             <div className="result-card">
-              <div className={`status-card ${severityClass(result.severity)}`}>
+              <div className={`status-card ${severityClass(result.severity_level)}`}>
                 <div>
-                  <div style={{ fontWeight: 700 }}>{result.prediction}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 13 }}>{result.severity}</div>
+                  <div style={{ fontWeight: 700 }}>Severity: {result.severity_level}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>Score: {result.severity_score ? result.severity_score.toFixed(2) : "N/A"}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>Face detected: {result.face_detected ? "Yes" : "No"}</div>
                 </div>
-                <div className="badge">{Math.round((result.probabilities?.malnourished || 0) * 100)}% Confidence</div>
               </div>
 
-              <div className="chart-box">
-                <div style={{ fontWeight: 700, color: "#0f172a", marginBottom:8 }}>Confidence Chart</div>
-                <canvas ref={chartRef} height={160}></canvas>
-              </div>
-
-              <div style={{ background: "#fff9ed", borderRadius:8, padding:12, border:"1px solid #fce9b8" }}>
+              <div style={{ background: "#fff9ed", borderRadius:8, padding:12, border:"1px solid #fce9b8", marginTop:12 }}>
                 <strong>Recommendations</strong>
                 <ul style={{ marginTop:8, paddingLeft:18, color:"var(--muted)" }}>
                   <li>• Consult healthcare for medical diagnosis</li>
@@ -233,7 +227,7 @@ export default function App() {
                 </ul>
               </div>
 
-              <div style={{ display:"flex", gap:10 }}>
+              <div style={{ display:"flex", gap:10, marginTop:12 }}>
                 <button onClick={downloadReport} className="btn btn-primary" style={{ flex:1 }}>Download Report</button>
               </div>
             </div>
