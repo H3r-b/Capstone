@@ -379,7 +379,7 @@ class MalnutritionPredictor:
         features = self.extract_features_from_image(image_path)
 
         if features is None or all(f == 0 for f in features):
-            return None, None
+            return "Face not detected",None
 
         features_scaled = self.scaler.transform([features])
         prediction = self.model.predict(features_scaled)[0]

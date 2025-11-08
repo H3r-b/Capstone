@@ -63,7 +63,12 @@ async def predict_image(file: UploadFile = File(...)):
 
         # Build response
         if result is None:
-            raise HTTPException(status_code=400, detail="Could not process image — ensure face and body are visible.")
+            return {
+                "filename": file.filename,
+                "severity_score": None,
+                "severity_level": None,
+                "face_detected": False
+            }
 
         return {
             "filename": file.filename,
@@ -120,7 +125,12 @@ async def predict_image_photo(file: UploadFile = File(...)):
         os.remove(temp_path)
 
         if result is None:
-            raise HTTPException(status_code=400, detail="Could not extract landmarks — ensure face and body are visible.")
+            return {
+                "filename": file.filename,
+                "severity_score": None,
+                "severity_level": None,
+                "face_detected": False
+            }
 
         return {
             "filename": file.filename,

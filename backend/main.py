@@ -6,10 +6,10 @@ import numpy as np
 predictor = MalnutritionPredictor()
 
 # Load trained model and scaler
-predictor.load_model('models\malnutrition_model.pkl')
+predictor.load_model(r"backend\models\malnutrition_model.pkl")
 
 # Path to new image
-image_path = "C:\\Users\\kamal\\Downloads\\Malnurished-631-_jpg.rf.4f19717d6832699daa30a310c8b088d4.jpg" # change this to your test image path
+image_path = r"backend\uploads\tokyo.jpg" # change this to your test image path
 
 # Run prediction
 result, confidence = predictor.predict_new_image(image_path)
@@ -23,7 +23,7 @@ elif result == "Healthy":
 elif result == "Malnourished":
 
     # Load the trained model
-    severity_model = joblib.load('models\malnutrition_severity_model.pkl')
+    severity_model = joblib.load('backend\models\malnutrition_severity_model.pkl')
     print("The person is detected as Malnourished. Let's predict severity.")
     age = int(input("Enter age: "))
     height = float(input("Enter height (in cm): "))
