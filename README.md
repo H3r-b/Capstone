@@ -2,7 +2,7 @@
 
 A comprehensive AI-powered web application that leverages computer vision and machine learning to detect malnutrition from photographs. The system uses facial and body landmark analysis to assess nutritional status and provides severity classification for early intervention.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-GPLv3-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
 ![React](https://img.shields.io/badge/React-19.1.1-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-teal.svg)
@@ -442,7 +442,7 @@ The FastAPI backend can be deployed using:
    - Grant camera permissions in browser
    - Use HTTPS for camera access (required by browsers)
 
-##  Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -452,13 +452,21 @@ Contributions are welcome! Please follow these steps:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+**Note:** By contributing to this project, you agree that your contributions will be licensed under the GNU General Public License v3.0 (GPLv3). This ensures that all derivative works remain open source and freely available.
+
 ## ⚠️ Disclaimer
 
 This system is intended for research and educational purposes. It should not be used as a sole diagnostic tool. Always consult with healthcare professionals for medical diagnosis and treatment decisions.
 
-##  License
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.html) for more details.
+
+You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 ##  Authors
 
