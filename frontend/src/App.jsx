@@ -148,7 +148,6 @@ export default function App() {
         weight: parseFloat(severityForm.weight),
         sex: severityForm.sex === "male" ? 1 : 0,
       });
-
       setSeverityResult(res.data.severity);
     } catch (err) {
       console.error(err);
@@ -344,10 +343,10 @@ export default function App() {
                 }}
               >
                 <div style={{ fontWeight: 700, fontSize: 16 }}>
-                  Severity: {result.severity_level}
+                  {result.severity_level}
                 </div>
                 <div style={{ color: "inherit", fontSize: 13 }}>
-                  Score: {result.severity_score ? result.severity_score.toFixed(2) : "N/A"}
+                  {result.severity_score ? result.severity_score.toFixed(2) : "N/A"}
                 </div>
                 <div style={{ color: "inherit", fontSize: 13 }}>
                   Face detected: {result.face_detected ? "Yes" : "No"}
@@ -477,21 +476,6 @@ export default function App() {
                 </div>
               )}
 
-              <div
-                style={{
-                  background: "#fff9ed",
-                  borderRadius: 8,
-                  padding: 12,
-                  border: "1px solid #fce9b8",
-                  marginTop: 12,
-                }}
-              >
-                <strong>Recommendations</strong>
-                <ul style={{ marginTop: 8, paddingLeft: 18, color: "var(--muted)" }}>
-                  <li>• Consult healthcare for medical diagnosis</li>
-                  <li>• Monitor dietary intake and weight</li>
-                </ul>
-              </div>
 
               {/* Removed download report button */}
             </div>
