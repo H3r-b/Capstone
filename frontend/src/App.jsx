@@ -108,9 +108,7 @@ export default function App() {
     const fd = new FormData();
     fd.append("file", file);
 
-    const endpoint = isCameraCapture
-      ? "http://127.0.0.1:8000/image"
-      : "http://127.0.0.1:8000/predict";
+    const endpoint = "http://127.0.0.1:8000/predict";
 
     try {
       const res = await axios.post(endpoint, fd, {
@@ -267,18 +265,7 @@ export default function App() {
               <>
                 <img src={preview} alt="preview" className="preview-img" />
                 <div style={{ marginTop: 10, color: "var(--muted)" }}>{file?.name}</div>
-                {isCameraCapture && (
-                  <div
-                    style={{
-                      marginTop: 6,
-                      color: "#0f766e",
-                      fontSize: 13,
-                      fontWeight: 500,
-                    }}
-                  >
-                    📸 Captured via Camera
-                  </div>
-                )}
+                {isCameraCapture && null}
               </>
             )}
             <input

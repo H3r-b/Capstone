@@ -108,36 +108,36 @@ async def calculate_severity(data: SeverityInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------------------------------------------------
-# 3️⃣ Camera photo endpoint (simplified)
-# ---------------------------------------------------------
-@app.post("/image")
-async def predict_image_photo(file: UploadFile = File(...)):
-    """
-    Handles photo capture from the frontend camera (used in 'Take Photo' mode).
-    """
-    try:
-        temp_path = UPLOAD_DIR / file.filename
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+# # ---------------------------------------------------------
+# # 3️⃣ Camera photo endpoint (simplified)
+# # ---------------------------------------------------------
+# @app.post("/image")
+# async def predict_image_photo(file: UploadFile = File(...)):
+#     """
+#     Handles photo capture from the frontend camera (used in 'Take Photo' mode).
+#     """
+#     try:
+#         temp_path = UPLOAD_DIR / file.filename
+#         with open(temp_path, "wb") as buffer:
+#             shutil.copyfileobj(file.file, buffer)
 
-        result, confidence = predictor.predict_new_image(str(temp_path))
-        os.remove(temp_path)
+#         result, confidence = predictor.predict_new_image(str(temp_path))
+#         os.remove(temp_path)
 
-        if result is None:
-            return {
-                "filename": file.filename,
-                "severity_score": None,
-                "severity_level": None,
-                "face_detected": False
-            }
+#         if result is None:
+#             return {
+#                 "filename": file.filename,
+#                 "severity_score": None,
+#                 "severity_level": None,
+#                 "face_detected": False
+#             }
 
-        return {
-            "filename": file.filename,
-            "severity_score": confidence,
-            "severity_level": result,
-            "face_detected": True,
-        }
+#         return {
+#             "filename": file.filename,
+#             "severity_score": confidence,
+#             "severity_level": result,
+#             "face_detected": True,
+#         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
